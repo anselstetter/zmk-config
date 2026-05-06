@@ -1,7 +1,25 @@
 /*
- * Copyright (c) 2020 The ZMK Contributors
+ * Corne Choc Pro BT — ZMK keymap
  *
- * SPDX-License-Identifier: MIT
+ * Each half has a display physically occupying what would have been
+ * 2 switch positions. So 4 keymap matrix positions are unwired (bound
+ * to &none): row 1 col 7, row 2 col 7 (left display), row 1 col 8,
+ * row 2 col 8 (right display) — i.e. the four middle positions on
+ * rows 1 and 2.
+ *
+ * Layers:
+ *   0 = BASE   (QWERTY, Linux default)
+ *   1 = MAC    (overlay; activated when on BT profile 1 via &bt_mac)
+ *   2 = NAV    (numbers, F-keys, vim arrows)
+ *   3 = DEV    (symbols, brackets)
+ *   4 = ADJ    (BT, system, RGB, Studio) — auto-activated by NAV+DEV
+ *   5-10       (reserved empty layers for future ZMK Studio editing)
+ *
+ * Tri-layer: holding NAV (left thumb middle) + DEV (right thumb middle)
+ * activates ADJ. No explicit binding needed.
+ *
+ * OS switching: BT profile 0 = Linux (BASE), BT profile 1 = Mac (MAC overlay).
+ * Use the &bt_linux / &bt_mac macros on the ADJ layer to switch.
  */
 
 #include <behaviors.dtsi>
@@ -9,28 +27,69 @@
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/rgb.h>
 
-/ {
-    chosen { zmk,physical-layout = &default_layout; };
-};
+#define BASE 0
+#define MAC  1
+#define NAV  2
+#define DEV  3
+#define ADJ  4
 
 / {
+    chosen { zmk,physical-layout = &default_layout; };
+
+    // Tri-layer: hold NAV + DEV together => ADJ activates automatically.
+    conditional_layers {
+        compatible = "zmk,conditional-layers";
+        tri_layer {
+            if-layers = <NAV DEV>;
+            then-layer = <ADJ>;
+        };
+    };
+
+    macros {
+        // Switch to Linux: BT profile 0, return to BASE
+        bt_linux: bt_linux {
+            label = "BT_LINUX";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings
+                = <&bt BT_SEL 0>
+                , <&to BASE>;
+        };
+
+        // Switch to Mac: BT profile 1, activate MAC overlay
+        bt_mac: bt_mac {
+            label = "BT_MAC";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings
+                = <&bt BT_SEL 1>
+                , <&to MAC>;
+        };
+    };
+
     behaviors {
+        // Layer-tap: tap = key, hold = momentary layer.
+        // retro-tap: if held without pressing another key, still emits the tap on release.
         lt_to_layer: lt_to_layer {
             compatible = "zmk,behavior-hold-tap";
             label = "LT_TO_LAYER";
             bindings = <&mo>, <&kp>;
-
             #binding-cells = <2>;
             tapping-term-ms = <200>;
             quick-tap-ms = <150>;
             flavor = "tap-preferred";
+            retro-tap;
         };
 
+        // German umlauts via Right Alt:
+        // Tap A/O/U/S => normal letter.
+        // Hold RALT + tap => umlaut/eszett (decoded by OS layout, e.g.
+        // 'English (US, intl., with dead keys)' on Linux,
+        // 'U.S. International - PC' on macOS).
         a_ae: a_ae {
             compatible = "zmk,behavior-mod-morph";
             label = "A_AE";
             bindings = <&kp A>, <&kp RA(Q)>;
-
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
         };
@@ -39,7 +98,6 @@
             compatible = "zmk,behavior-mod-morph";
             label = "O_OE";
             bindings = <&kp O>, <&kp RA(P)>;
-
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
         };
@@ -48,7 +106,6 @@
             compatible = "zmk,behavior-mod-morph";
             label = "U_UE";
             bindings = <&kp U>, <&kp RA(Y)>;
-
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
         };
@@ -57,7 +114,6 @@
             compatible = "zmk,behavior-mod-morph";
             label = "S_SZ";
             bindings = <&kp S>, <&kp RA(S)>;
-
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
         };
@@ -66,116 +122,250 @@
     keymap {
         compatible = "zmk,keymap";
 
-        default_layer {
+        /*
+         * ============================================================
+         * BASE (Linux default) — Layer 0
+         * ============================================================
+         *
+         * ,-----------------------------------.              ,-----------------------------------.
+         * | TAB |  Q  |  W  |  E  |  R  |  T  |              |  Y  | U*  |  I  | O*  |  P  |BSPC |
+         * |-----+-----+-----+-----+-----+-----| [DSP]  [DSP] |-----+-----+-----+-----+-----+-----|
+         * |CT/ES|  A* | S/ß |  D  |  F  |  G  |              |  H  |  J  |  K  |  L  | ;/N |  '  |
+         * |-----+-----+-----+-----+-----+-----|              |-----+-----+-----+-----+-----+-----|
+         * |SHFT |  Z  |  X  |  C  |  V  |  B  |              |  N  |  M  |  ,  |  .  |  /  |RS/E |
+         * `-----------------------------------'              `-----------------------------------'
+         *               | GUI | NAV | ENT |                  | SPC | DEV |RALT |
+         *               `-----------------'                  `-----------------'
+         *
+         * [DSP] = display position (no switch wired here, bound to &none).
+         *   Each display spans 2 rows on its half of the matrix.
+         *
+         * * = mod-morph: hold RALT (right thumb) + tap to get the umlaut/eszett.
+         *   A => ä,  O => ö,  U => ü,  S => ß
+         *
+         * Mod-taps:
+         *   - Left pinky home row: tap = ESC, hold = LCTRL  (&mt LCTRL ESCAPE)
+         *   - Right pinky bottom row: tap = ENTER, hold = RSHIFT  (&mt RSHFT ENTER)
+         *
+         * Layer-tap:
+         *   - ;/N = tap for SEMICOLON, hold for NAV layer (&lt_to_layer NAV)
+         *
+         * Thumb layers:
+         *   - Left thumb middle: momentary NAV
+         *   - Right thumb middle: momentary DEV
+         *   - Both together: ADJ (via conditional_layers)
+         *
+         * Note: GUI = Super on Linux. On Mac, the same physical thumb is overridden
+         * to Ctrl in the MAC layer (because Mac uses Cmd as the primary modifier,
+         * and we want Ctrl available too — see MAC layer below). The left pinky's
+         * mod-tap is swapped to LGUI on Mac so tap=ESC still works while hold=Cmd.
+         * Right Alt works as Option on Mac, so umlaut input works on both OSes
+         * provided the system input source is set to a US-International variant.
+         */
+        base_layer {
             display-name = "QWERTY";
-
-            // --------------------------------------------------------------------------------
-            // |  TAB |  Q  |  W  |  E  |  R  |  T  |  MUTE |  PP   |  Y  |  U   |  I  |  O  |  P  | BSPC |
-            // | CTRL |  A  |  S  |  D  |  F  |  G  |  LALT |  RALT |  H  |  J   |  K  |  L  |  ;  |  '   |
-            // | SHFT |  Z  |  X  |  C  |  V  |  B  |               |  N  |  M   |  ,  |  .  |  /  | ESC  |
-            //                    | GUI | LWR | SPC |               | ENT | RSE  | ALT |
-
             bindings = <
-&kp TAB           &kp Q  &kp W  &kp E     &kp R  &kp T    &kp C_MUTE  &kp C_PP  &kp Y      &u_ue  &kp I      &o_oe    &kp P                     &kp BSPC
-&mt LCTRL ESCAPE  &a_ae  &s_sz  &kp D     &kp F  &kp G    &kp LALT    &kp RALT  &kp H      &kp J  &kp K      &kp L    &lt_to_layer 1 SEMICOLON  &kp SQT
-&kp LSHFT         &kp Z  &kp X  &kp C     &kp V  &kp B                          &kp N      &kp M  &kp COMMA  &kp DOT  &kp FSLH                  &mt RSHFT ENTER
-                                &kp LGUI  &mo 1  &kp RET                        &kp SPACE  &mo 2  &kp RALT
-            >;
-
-            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp PG_UP PG_DN &inc_dec_kp C_PREV C_NEXT &inc_dec_kp C_BRI_DN C_BRI_UP>;
-        };
-
-        lower_layer {
-            display-name = "NUMBER";
-
-            // -----------------------------------------------------------------------------------------
-            // |  TAB |  1  |  2  |  3  |  4  |  5    |  LCTRL | RCTRL |  6  |  7  |  8  |  9  |  0  | BSPC |
-            // | CTRL | BT1 | BT2 | BT3 | BT4 | BT5   |  LALT  | RALT  | LFT | DWN |  UP | RGT |     |      |
-            // | SHFT | BTCR| RGB | RST | BOOT| Unlock|        |       |     |     |     |     |     |      |
-            //                    | GUI |     | SPC   |        | ENT   |     | ALT |
-
-            bindings = <
-&kp TAB    &kp N1        &kp N2           &kp N3        &kp N4        &kp N5          &kp LCTRL  &kp RCTRL  &kp N6         &kp N7    &kp N8     &kp N9     &kp N0  &kp BSPC
-&kp LCTRL  &bt BT_SEL 0  &bt BT_SEL 1     &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4    &kp LALT   &kp RALT   &kp LEFT       &kp DOWN  &kp UP     &kp RIGHT  &trans  &trans
-&kp LSHFT  &bt BT_CLR    &rgb_ug RGB_TOG  &sys_reset    &bootloader   &studio_unlock                        &trans         &trans    &trans     &trans     &trans  &trans
-                                          &kp LGUI      &trans        &kp SPACE                             &kp BACKSPACE  &trans    &kp SPACE
+&kp TAB           &kp Q  &kp W  &kp E     &kp R    &kp T      &none      &none      &kp Y      &u_ue    &kp I      &o_oe    &kp P                  &kp BSPC
+&mt LCTRL ESCAPE  &a_ae  &s_sz  &kp D     &kp F    &kp G      &none      &none      &kp H      &kp J    &kp K      &kp L    &lt_to_layer NAV SEMI  &kp SQT
+&kp LSHFT         &kp Z  &kp X  &kp C     &kp V    &kp B                            &kp N      &kp M    &kp COMMA  &kp DOT  &kp FSLH               &mt RSHFT ENTER
+                                &kp LGUI  &mo NAV  &kp RET                          &kp SPACE  &mo DEV  &kp RALT
             >;
         };
 
-        raise_layer {
-            display-name = "SYMBOL";
-
-            // -----------------------------------------------------------------------------------------
-            // |  TAB |  !  |  @  |  #  |  $  |  %  | LCTRL | RCTRL |  ^  |  &  |  *  |  (  |  )  | BSPC |
-            // | CTRL |     |     |     |     |     |  LALT | RALT  |  -  |  =  |  [  |  ]  |  \  |  `   |
-            // | SHFT |     |     |     |     |     |               |  _  |  +  |  {  |  }  | "|" |  ~   |
-            //                    | GUI |     | SPC |               | ENT |     | ALT |
-
+        /*
+         * ============================================================
+         * MAC overlay — Layer 1
+         * ============================================================
+         *
+         * ,-----------------------------------.              ,-----------------------------------.
+         * |     |     |     |     |     |     |              |     |     |     |     |     |     |
+         * |-----+-----+-----+-----+-----+-----| [DSP]  [DSP] |-----+-----+-----+-----+-----+-----|
+         * |GU/ES|     |     |     |     |     |              |     |     |     |     |     |     |
+         * |-----+-----+-----+-----+-----+-----|              |-----+-----+-----+-----+-----+-----|
+         * |     |     |     |     |     |     |              |     |     |     |     |     |     |
+         * `-----------------------------------'              `-----------------------------------'
+         *               |CTRL |     |     |                  |     |     |     |
+         *               `-----------------'                  `-----------------'
+         *
+         * Activated by &bt_mac (BT profile 1 + jump to this layer).
+         *
+         * Pinky-Ctrl swap to handle the Ctrl-vs-Cmd difference between OSes:
+         *   - Left pinky home row: tap = ESC, hold = LGUI (Cmd) instead of LCTRL.
+         *     So pinky+C still does "copy" — Cmd+C on Mac, Ctrl+C on Linux.
+         *   - Left thumb GUI position: becomes LCTRL on Mac, so when you genuinely
+         *     need Ctrl (e.g. Ctrl+A/E/D in shell), the thumb has it.
+         *
+         * Everything else is &trans and falls through to BASE.
+         * Right Alt remains Right Alt = Option on Mac, so umlauts still work.
+         */
+        mac_layer {
+            display-name = "MAC";
             bindings = <
-&kp TAB    &kp EXCL  &kp AT             &kp HASH         &kp DLLR               &kp PRCNT         &kp LCTRL  &kp RCTRL  &kp CARET  &kp AMPS   &kp ASTRK  &kp LPAR  &kp RPAR  &kp BSPC
-&kp LCTRL  &trans    &kp LEFT_BRACKET   &kp LEFT_BRACE   &kp LEFT_PARENTHESIS   &kp LESS_THAN     &kp LALT   &kp RALT   &kp MINUS  &kp EQUAL  &kp LBKT   &kp RBKT  &kp BSLH  &kp GRAVE
-&kp LSHFT  &trans    &kp RIGHT_BRACKET  &kp RIGHT_BRACE  &kp RIGHT_PARENTHESIS  &kp GREATER_THAN                        &kp UNDER  &kp PLUS   &kp LBRC   &kp RBRC  &kp PIPE  &kp TILDE
-                                        &kp LGUI         &trans                 &kp SPACE                               &kp RET    &trans     &kp RALT
+&trans            &trans &trans &trans     &trans  &trans      &none      &none      &trans     &trans  &trans     &trans   &trans  &trans
+&mt LGUI ESCAPE   &trans &trans &trans     &trans  &trans      &none      &none      &trans     &trans  &trans     &trans   &trans  &trans
+&trans            &trans &trans &trans     &trans  &trans                            &trans     &trans  &trans     &trans   &trans  &trans
+                                &kp LCTRL  &trans  &trans                            &trans     &trans  &trans
             >;
         };
 
+        /*
+         * ============================================================
+         * NAV / NUM — Layer 2
+         * ============================================================
+         *
+         * ,-----------------------------------.              ,-----------------------------------.
+         * |     |  1  |  2  |  3  |  4  |  5  |              |  6  |  7  |  8  |  9  |  0  |     |
+         * |-----+-----+-----+-----+-----+-----| [DSP]  [DSP] |-----+-----+-----+-----+-----+-----|
+         * |     | F1  | F2  | F3  | F4  | F5  |              | LFT | DWN |  UP | RGT | HOM | END |
+         * |-----+-----+-----+-----+-----+-----|              |-----+-----+-----+-----+-----+-----|
+         * |     | F6  | F7  | F8  | F9  | F10 |              | F11 | F12 | PUP | PDN | DEL |     |
+         * `-----------------------------------'              `-----------------------------------'
+         *               |     |     |     |                  |     |     |     |
+         *               `-----------------'                  `-----------------'
+         *
+         * Vim arrows on the right home row: H J K L = ← ↓ ↑ →
+         * Hold NAV + DEV simultaneously to reach ADJ via the tri-layer rule.
+         */
+        nav_layer {
+            display-name = "NAV";
+            bindings = <
+&trans  &kp N1  &kp N2  &kp N3  &kp N4  &kp N5      &none  &none      &kp N6     &kp N7    &kp N8     &kp N9     &kp N0    &trans
+&trans  &kp F1  &kp F2  &kp F3  &kp F4  &kp F5      &none  &none      &kp LEFT   &kp DOWN  &kp UP     &kp RIGHT  &kp HOME  &kp END
+&trans  &kp F6  &kp F7  &kp F8  &kp F9  &kp F10                       &kp F11    &kp F12   &kp PG_UP  &kp PG_DN  &kp DEL   &trans
+                        &trans  &trans  &trans                        &trans     &trans    &trans
+            >;
+        };
+
+        /*
+         * ============================================================
+         * DEV / Symbols — Layer 3
+         * ============================================================
+         *
+         * ,-----------------------------------.              ,-----------------------------------.
+         * |     |  !  |  @  |  #  |  $  |  %  |              |  ^  |  &  |  *  |  \  |  |  |     |
+         * |-----+-----+-----+-----+-----+-----| [DSP]  [DSP] |-----+-----+-----+-----+-----+-----|
+         * |     |  ~  |  `  |  -  |  _  |  +  |              |  (  |  )  |  [  |  ]  |  {  |  }  |
+         * |-----+-----+-----+-----+-----+-----|              |-----+-----+-----+-----+-----+-----|
+         * |     |     |  =  |  <  |  >  |  ?  |              |  /  |  :  |  ;  |  "  |  '  |     |
+         * `-----------------------------------'              `-----------------------------------'
+         *               |     |     |     |                  |     |     |     |
+         *               `-----------------'                  `-----------------'
+         *
+         * Notes:
+         * - All four bracket pairs (), [], {} on the right home row in
+         *   left/right pair order. <> on the bottom row.
+         * - Both ` and ~ available without combos (handy for shells and md).
+         * - Hold NAV + DEV simultaneously to reach ADJ via the tri-layer rule.
+         */
+        dev_layer {
+            display-name = "DEV";
+            bindings = <
+&trans  &kp EXCL   &kp AT     &kp HASH   &kp DLLR   &kp PRCNT      &none  &none      &kp CARET  &kp AMPS   &kp ASTRK  &kp BSLH  &kp PIPE  &trans
+&trans  &kp TILDE  &kp GRAVE  &kp MINUS  &kp UNDER  &kp PLUS       &none  &none      &kp LPAR   &kp RPAR   &kp LBKT   &kp RBKT  &kp LBRC  &kp RBRC
+&trans  &trans     &kp EQUAL  &kp LT     &kp GT     &kp QMARK                        &kp FSLH   &kp COLON  &kp SEMI   &kp DQT   &kp SQT   &trans
+                              &trans     &trans     &trans                           &trans     &trans     &trans
+            >;
+        };
+
+        /*
+         * ============================================================
+         * ADJUST — Layer 4
+         * ============================================================
+         * Auto-activated by the conditional_layers rule when NAV (2)
+         * and DEV (3) are both held — i.e. hold both thumb-middle keys.
+         *
+         * ,-----------------------------------.              ,-----------------------------------.
+         * |BOOT |     |     |     |     |     |              |     |     |     |     |     |BOOT |
+         * |-----+-----+-----+-----+-----+-----| [DSP]  [DSP] |-----+-----+-----+-----+-----+-----|
+         * |     |LINUX| MAC |     |     | RST |              | BT0 | BT1 | BT2 | BT3 | BT4 |BCLR |
+         * |-----+-----+-----+-----+-----+-----|              |-----+-----+-----+-----+-----+-----|
+         * |     |     |     |     |     |STDIO|              |     |     |     |     |RGBTG|     |
+         * `-----------------------------------'              `-----------------------------------'
+         *               |     |     |     |                  |     |     |     |
+         *               `-----------------'                  `-----------------'
+         *
+         * - LINUX = &bt_linux  (BT profile 0 + return to BASE)
+         * - MAC   = &bt_mac    (BT profile 1 + activate MAC overlay)
+         * - BT0..BT4 = direct profile selection (no overlay change — useful for
+         *   pairing additional devices later)
+         * - BCLR  = clear current BT profile pairing (right pinky, next to BT4
+         *   so the BT cluster is contiguous)
+         * - RST   = sys_reset (soft reset)
+         * - STDIO = studio_unlock (enable ZMK Studio editing) — placed where 'B' is
+         *   on BASE so it requires a deliberate inner-column reach
+         * - RGBTG = toggle RGB underglow on/off
+         * - BOOT  = bootloader (top-row outer corners; deliberate reach required,
+         *   one per half so you can flash each side independently)
+         */
+        adjust_layer {
+            display-name = "ADJ";
+            bindings = <
+&bootloader  &none      &none    &none   &none   &none           &none  &none      &none         &none         &none         &none         &none            &bootloader
+&none        &bt_linux  &bt_mac  &none   &none   &sys_reset      &none  &none      &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4     &bt BT_CLR
+&none        &none      &none    &none   &none   &studio_unlock                     &none         &none         &none         &none         &rgb_ug RGB_TOG  &none
+                                 &trans  &trans  &trans                             &trans        &trans        &trans
+            >;
+        };
+
+        // Reserved empty layers — kept so ZMK Studio can edit them later
+        // without rebuilding firmware.
         extra_layer_1 {
             display-name = "EXTRA 1";
             bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                  &trans  &trans  &trans  &trans  &trans  &trans
-                        &trans  &trans  &trans                  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                &trans  &trans  &trans  &trans  &trans  &trans
+                        &trans  &trans  &trans                &trans  &trans  &trans
             >;
         };
 
         extra_layer_2 {
             display-name = "EXTRA 2";
             bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                  &trans  &trans  &trans  &trans  &trans  &trans
-                        &trans  &trans  &trans                  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                &trans  &trans  &trans  &trans  &trans  &trans
+                        &trans  &trans  &trans                &trans  &trans  &trans
             >;
         };
 
         extra_layer_3 {
             display-name = "EXTRA 3";
             bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                  &trans  &trans  &trans  &trans  &trans  &trans
-                        &trans  &trans  &trans                  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                &trans  &trans  &trans  &trans  &trans  &trans
+                        &trans  &trans  &trans                &trans  &trans  &trans
             >;
         };
 
         extra_layer_4 {
             display-name = "EXTRA 4";
             bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                  &trans  &trans  &trans  &trans  &trans  &trans
-                        &trans  &trans  &trans                  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                &trans  &trans  &trans  &trans  &trans  &trans
+                        &trans  &trans  &trans                &trans  &trans  &trans
             >;
         };
 
         extra_layer_5 {
             display-name = "EXTRA 5";
             bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                  &trans  &trans  &trans  &trans  &trans  &trans
-                        &trans  &trans  &trans                  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                &trans  &trans  &trans  &trans  &trans  &trans
+                        &trans  &trans  &trans                &trans  &trans  &trans
             >;
         };
 
         extra_layer_6 {
             display-name = "EXTRA 6";
             bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                  &trans  &trans  &trans  &trans  &trans  &trans
-                        &trans  &trans  &trans                  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &none  &none  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                &trans  &trans  &trans  &trans  &trans  &trans
+                        &trans  &trans  &trans                &trans  &trans  &trans
             >;
         };
     };
