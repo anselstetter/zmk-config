@@ -244,7 +244,7 @@
          * ,-----------------------------------.              ,-----------------------------------.
          * |     |  !  |  @  |  #  |  $  |  %  |              |  ^  |  &  |  *  |  \  |  |  |     |
          * |-----+-----+-----+-----+-----+-----| [DSP]  [DSP] |-----+-----+-----+-----+-----+-----|
-         * |     |  ~  |  `  |  -  |  _  |  +  |              |  (  |  )  |  [  |  ]  |  {  |  }  |
+         * |     |  ~  |  `  |  -  |  _  |  +  |              |  (  |  )  |  {  |  }  |  [  |  ]  |
          * |-----+-----+-----+-----+-----+-----|              |-----+-----+-----+-----+-----+-----|
          * |     |     |  =  |  <  |  >  |  ?  |              |  /  |  :  |  ;  |  "  |  '  |     |
          * `-----------------------------------'              `-----------------------------------'
@@ -261,7 +261,7 @@
             display-name = "DEV";
             bindings = <
 &trans  &kp EXCL   &kp AT     &kp HASH   &kp DLLR   &kp PRCNT      &none  &none      &kp CARET  &kp AMPS   &kp ASTRK  &kp BSLH  &kp PIPE  &trans
-&trans  &kp TILDE  &kp GRAVE  &kp MINUS  &kp UNDER  &kp PLUS       &none  &none      &kp LPAR   &kp RPAR   &kp LBKT   &kp RBKT  &kp LBRC  &kp RBRC
+&trans  &kp TILDE  &kp GRAVE  &kp MINUS  &kp UNDER  &kp PLUS       &none  &none      &kp LPAR   &kp RPAR   &kp LBRC   &kp RBRC  &kp LBKT  &kp RBKT
 &trans  &trans     &kp EQUAL  &kp LT     &kp GT     &kp QMARK                        &kp FSLH   &kp COLON  &kp SEMI   &kp DQT   &kp SQT   &trans
                               &trans     &trans     &trans                           &trans     &trans     &trans
             >;
