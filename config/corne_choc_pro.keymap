@@ -67,9 +67,25 @@
         };
 
         // Mac umlauts: Option+U (dead key for diaeresis), then the vowel.
-        // Requires macOS input source = "ABC" or "ABC – Extended".
-        mac_ae: mac_ae {
-            label = "MAC_AE";
+        // Requires macOS input source = "ABC" (default on modern macOS works fine).
+        //
+        // Lower vs upper handling:
+        //   The outer RALT mod-morph (a_ae_mac etc.) masks RALT cleanly.
+        //   An inner mod-morph (ae_mac_morph etc.) then branches on Shift:
+        //     - no shift held  -> lower macro (Option+U then a)
+        //     - shift held     -> upper macro: shift is masked by the morph
+        //                         (default behavior, since `mods` includes shift
+        //                         and `keep-mods` is omitted), so Option+U fires
+        //                         with clean modifier state, then shift is
+        //                         re-applied only for the final letter so the
+        //                         dead-key composes into the capital umlaut.
+        //
+        // Without the masking, Shift would leak into Option+U and macOS would
+        // emit the bare diaeresis character followed by the capital letter
+        // (two characters, not one composed glyph).
+
+        mac_ae_lower: mac_ae_lower {
+            label = "MAC_AE_LOWER";
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
             bindings
@@ -77,8 +93,19 @@
                 , <&macro_tap &kp A>;
         };
 
-        mac_oe: mac_oe {
-            label = "MAC_OE";
+        mac_ae_upper: mac_ae_upper {
+            label = "MAC_AE_UPPER";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings
+                = <&macro_tap     &kp RA(U)>
+                , <&macro_press   &kp LSHFT>
+                , <&macro_tap     &kp A>
+                , <&macro_release &kp LSHFT>;
+        };
+
+        mac_oe_lower: mac_oe_lower {
+            label = "MAC_OE_LOWER";
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
             bindings
@@ -86,13 +113,35 @@
                 , <&macro_tap &kp O>;
         };
 
-        mac_ue: mac_ue {
-            label = "MAC_UE";
+        mac_oe_upper: mac_oe_upper {
+            label = "MAC_OE_UPPER";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings
+                = <&macro_tap     &kp RA(U)>
+                , <&macro_press   &kp LSHFT>
+                , <&macro_tap     &kp O>
+                , <&macro_release &kp LSHFT>;
+        };
+
+        mac_ue_lower: mac_ue_lower {
+            label = "MAC_UE_LOWER";
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
             bindings
                 = <&macro_tap &kp RA(U)>
                 , <&macro_tap &kp U>;
+        };
+
+        mac_ue_upper: mac_ue_upper {
+            label = "MAC_UE_UPPER";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings
+                = <&macro_tap     &kp RA(U)>
+                , <&macro_press   &kp LSHFT>
+                , <&macro_tap     &kp U>
+                , <&macro_release &kp LSHFT>;
         };
     };
 
@@ -147,26 +196,60 @@
             mods = <(MOD_RALT)>;
         };
 
+        // Mac umlaut mod-morphs:
+        //   Outer (X_mac):   triggered by RALT. Default branch = plain &kp X.
+        //                    Morphed branch = inner shift-morph. RALT is masked
+        //                    automatically (default ZMK mod-morph behavior).
+        //   Inner (X_mac_m): triggered by Shift. Default branch = lowercase macro.
+        //                    Morphed branch = uppercase macro. Shift is masked
+        //                    automatically, so the lowercase macro's Option+U
+        //                    fires with clean modifier state; the uppercase
+        //                    macro re-applies Shift only for the final letter.
+
+        ae_mac_morph: ae_mac_morph {
+            compatible = "zmk,behavior-mod-morph";
+            label = "AE_MAC_MORPH";
+            bindings = <&mac_ae_lower>, <&mac_ae_upper>;
+            #binding-cells = <0>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
         a_ae_mac: a_ae_mac {
             compatible = "zmk,behavior-mod-morph";
             label = "A_AE_MAC";
-            bindings = <&kp A>, <&mac_ae>;
+            bindings = <&kp A>, <&ae_mac_morph>;
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
+        };
+
+        oe_mac_morph: oe_mac_morph {
+            compatible = "zmk,behavior-mod-morph";
+            label = "OE_MAC_MORPH";
+            bindings = <&mac_oe_lower>, <&mac_oe_upper>;
+            #binding-cells = <0>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
         };
 
         o_oe_mac: o_oe_mac {
             compatible = "zmk,behavior-mod-morph";
             label = "O_OE_MAC";
-            bindings = <&kp O>, <&mac_oe>;
+            bindings = <&kp O>, <&oe_mac_morph>;
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
+        };
+
+        ue_mac_morph: ue_mac_morph {
+            compatible = "zmk,behavior-mod-morph";
+            label = "UE_MAC_MORPH";
+            bindings = <&mac_ue_lower>, <&mac_ue_upper>;
+            #binding-cells = <0>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
         };
 
         u_ue_mac: u_ue_mac {
             compatible = "zmk,behavior-mod-morph";
             label = "U_UE_MAC";
-            bindings = <&kp U>, <&mac_ue>;
+            bindings = <&kp U>, <&ue_mac_morph>;
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
         };
