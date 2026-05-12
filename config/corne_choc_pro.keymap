@@ -65,6 +65,35 @@
                 = <&bt BT_SEL 1>
                 , <&to MAC>;
         };
+
+        // Mac umlauts: Option+U (dead key for diaeresis), then the vowel.
+        // Requires macOS input source = "ABC" or "ABC – Extended".
+        mac_ae: mac_ae {
+            label = "MAC_AE";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings
+                = <&macro_tap &kp RA(U)>
+                , <&macro_tap &kp A>;
+        };
+
+        mac_oe: mac_oe {
+            label = "MAC_OE";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings
+                = <&macro_tap &kp RA(U)>
+                , <&macro_tap &kp O>;
+        };
+
+        mac_ue: mac_ue {
+            label = "MAC_UE";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings
+                = <&macro_tap &kp RA(U)>
+                , <&macro_tap &kp U>;
+        };
     };
 
     behaviors {
@@ -114,6 +143,30 @@
             compatible = "zmk,behavior-mod-morph";
             label = "S_SZ";
             bindings = <&kp S>, <&kp RA(S)>;
+            #binding-cells = <0>;
+            mods = <(MOD_RALT)>;
+        };
+
+        a_ae_mac: a_ae_mac {
+            compatible = "zmk,behavior-mod-morph";
+            label = "A_AE_MAC";
+            bindings = <&kp A>, <&mac_ae>;
+            #binding-cells = <0>;
+            mods = <(MOD_RALT)>;
+        };
+
+        o_oe_mac: o_oe_mac {
+            compatible = "zmk,behavior-mod-morph";
+            label = "O_OE_MAC";
+            bindings = <&kp O>, <&mac_oe>;
+            #binding-cells = <0>;
+            mods = <(MOD_RALT)>;
+        };
+
+        u_ue_mac: u_ue_mac {
+            compatible = "zmk,behavior-mod-morph";
+            label = "U_UE_MAC";
+            bindings = <&kp U>, <&mac_ue>;
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
         };
@@ -178,9 +231,9 @@
          * ============================================================
          *
          * ,-----------------------------------.              ,-----------------------------------.
-         * |     |     |     |     |     |     |              |     |     |     |     |     |     |
+         * |     |     |     |     |     |     |              |     |  U* |     |  O* |     |     |
          * |-----+-----+-----+-----+-----+-----| [DSP]  [DSP] |-----+-----+-----+-----+-----+-----|
-         * |GU/ES|     |     |     |     |     |              |     |     |     |     |     |     |
+         * |GU/ES|  A* |     |     |     |     |              |     |     |     |     |     |     |
          * |-----+-----+-----+-----+-----+-----|              |-----+-----+-----+-----+-----+-----|
          * |     |     |     |     |     |     |              |     |     |     |     |     |     |
          * `-----------------------------------'              `-----------------------------------'
@@ -201,10 +254,10 @@
         mac_layer {
             display-name = "MAC";
             bindings = <
-&trans            &trans &trans &trans     &trans  &trans      &none      &none      &trans     &trans  &trans     &trans   &trans  &trans
-&mt LGUI ESCAPE   &trans &trans &trans     &trans  &trans      &none      &none      &trans     &trans  &trans     &trans   &trans  &trans
-&trans            &trans &trans &trans     &trans  &trans                            &trans     &trans  &trans     &trans   &trans  &trans
-                                &kp LCTRL  &trans  &trans                            &trans     &trans  &trans
+&trans           &trans     &trans  &trans      &trans  &trans  &none  &none  &trans  &u_ue_mac  &trans  &o_oe_mac  &trans  &trans
+&mt LGUI ESCAPE  &a_ae_mac  &trans  &trans      &trans  &trans  &none  &none  &trans  &trans     &trans  &trans     &trans  &trans
+&trans           &trans     &trans  &trans      &trans  &trans                &trans  &trans     &trans  &trans     &trans  &trans
+                                    &kp LCTRL   &trans  &trans                &trans  &trans     &trans
             >;
         };
 
