@@ -65,84 +65,6 @@
                 = <&bt BT_SEL 1>
                 , <&to MAC>;
         };
-
-        // Mac umlauts: Option+U (dead key for diaeresis), then the vowel.
-        // Requires macOS input source = "ABC" (default on modern macOS works fine).
-        //
-        // Lower vs upper handling:
-        //   The outer RALT mod-morph (a_ae_mac etc.) masks RALT cleanly.
-        //   An inner mod-morph (ae_mac_morph etc.) then branches on Shift:
-        //     - no shift held  -> lower macro (Option+U then a)
-        //     - shift held     -> upper macro: shift is masked by the morph
-        //                         (default behavior, since `mods` includes shift
-        //                         and `keep-mods` is omitted), so Option+U fires
-        //                         with clean modifier state, then shift is
-        //                         re-applied only for the final letter so the
-        //                         dead-key composes into the capital umlaut.
-        //
-        // Without the masking, Shift would leak into Option+U and macOS would
-        // emit the bare diaeresis character followed by the capital letter
-        // (two characters, not one composed glyph).
-
-        mac_ae_lower: mac_ae_lower {
-            label = "MAC_AE_LOWER";
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap &kp RA(U)>
-                , <&macro_tap &kp A>;
-        };
-
-        mac_ae_upper: mac_ae_upper {
-            label = "MAC_AE_UPPER";
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap     &kp RA(U)>
-                , <&macro_press   &kp LSHFT>
-                , <&macro_tap     &kp A>
-                , <&macro_release &kp LSHFT>;
-        };
-
-        mac_oe_lower: mac_oe_lower {
-            label = "MAC_OE_LOWER";
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap &kp RA(U)>
-                , <&macro_tap &kp O>;
-        };
-
-        mac_oe_upper: mac_oe_upper {
-            label = "MAC_OE_UPPER";
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap     &kp RA(U)>
-                , <&macro_press   &kp LSHFT>
-                , <&macro_tap     &kp O>
-                , <&macro_release &kp LSHFT>;
-        };
-
-        mac_ue_lower: mac_ue_lower {
-            label = "MAC_UE_LOWER";
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap &kp RA(U)>
-                , <&macro_tap &kp U>;
-        };
-
-        mac_ue_upper: mac_ue_upper {
-            label = "MAC_UE_UPPER";
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap     &kp RA(U)>
-                , <&macro_press   &kp LSHFT>
-                , <&macro_tap     &kp U>
-                , <&macro_release &kp LSHFT>;
-        };
     };
 
     behaviors {
@@ -197,62 +119,46 @@
         };
 
         // Mac umlaut mod-morphs:
-        //   Outer (X_mac):   triggered by RALT. Default branch = plain &kp X.
-        //                    Morphed branch = inner shift-morph. RALT is masked
-        //                    automatically (default ZMK mod-morph behavior).
-        //   Inner (X_mac_m): triggered by Shift. Default branch = lowercase macro.
-        //                    Morphed branch = uppercase macro. Shift is masked
-        //                    automatically, so the lowercase macro's Option+U
-        //                    fires with clean modifier state; the uppercase
-        //                    macro re-applies Shift only for the final letter.
-
-        ae_mac_morph: ae_mac_morph {
-            compatible = "zmk,behavior-mod-morph";
-            label = "AE_MAC_MORPH";
-            bindings = <&mac_ae_lower>, <&mac_ae_upper>;
-            #binding-cells = <0>;
-            mods = <(MOD_LSFT|MOD_RSFT)>;
-        };
-
+        //   Requires macOS input source = "ABC - German" (or any layout
+        //   that maps Option+A/O/U/S directly to ä/ö/ü/ß and
+        //   Shift+Option+letter to the capital variants).
+        //
+        //   With that layout, the OS handles shift natively, so we don't
+        //   need macros or nested mod-morphs at all -- just emit RA(letter)
+        //   when RALT is held, the same shape as the Linux side. Shift
+        //   composes naturally because the OS keyboard layout knows that
+        //   Shift+Option+a = Ä.
+        //
+        // Structurally identical to the Linux a_ae / o_oe / u_ue morphs;
+        // the only reason they're separate behaviors is so the keys land
+        // on the right matrix positions via the MAC overlay layer.
         a_ae_mac: a_ae_mac {
             compatible = "zmk,behavior-mod-morph";
             label = "A_AE_MAC";
-            bindings = <&kp A>, <&ae_mac_morph>;
+            bindings = <&kp A>, <&kp RA(A)>;
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
-        };
-
-        oe_mac_morph: oe_mac_morph {
-            compatible = "zmk,behavior-mod-morph";
-            label = "OE_MAC_MORPH";
-            bindings = <&mac_oe_lower>, <&mac_oe_upper>;
-            #binding-cells = <0>;
-            mods = <(MOD_LSFT|MOD_RSFT)>;
         };
 
         o_oe_mac: o_oe_mac {
             compatible = "zmk,behavior-mod-morph";
             label = "O_OE_MAC";
-            bindings = <&kp O>, <&oe_mac_morph>;
+            bindings = <&kp O>, <&kp RA(O)>;
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
-        };
-
-        ue_mac_morph: ue_mac_morph {
-            compatible = "zmk,behavior-mod-morph";
-            label = "UE_MAC_MORPH";
-            bindings = <&mac_ue_lower>, <&mac_ue_upper>;
-            #binding-cells = <0>;
-            mods = <(MOD_LSFT|MOD_RSFT)>;
         };
 
         u_ue_mac: u_ue_mac {
             compatible = "zmk,behavior-mod-morph";
             label = "U_UE_MAC";
-            bindings = <&kp U>, <&ue_mac_morph>;
+            bindings = <&kp U>, <&kp RA(U)>;
             #binding-cells = <0>;
             mods = <(MOD_RALT)>;
         };
+
+        // Note: no s_sz_mac needed. The Linux s_sz already emits RA(S),
+        // which is also Option+S = ß on the new Mac layout. The MAC layer
+        // can &trans through to the BASE s_sz binding unchanged.
     };
 
     keymap {
@@ -295,8 +201,15 @@
          * to Ctrl in the MAC layer (because Mac uses Cmd as the primary modifier,
          * and we want Ctrl available too — see MAC layer below). The left pinky's
          * mod-tap is swapped to LGUI on Mac so tap=ESC still works while hold=Cmd.
-         * Right Alt works as Option on Mac, so umlaut input works on both OSes
-         * provided the system input source is set to a US-International variant.
+         *
+         * Umlauts work on both OSes via the same physical chord (hold RALT + tap
+         * letter), but the OS-level keyboard layouts differ:
+         *   - Linux: "English (US, intl., with AltGr dead keys)" — AltGr+Q/P/Y/S
+         *     produce ä/ö/ü/ß, so the BASE morphs emit RA(Q)/RA(P)/RA(Y)/RA(S).
+         *   - Mac:   "ABC - German" (or equivalent layout with umlauts on Option) —
+         *     Option+A/O/U/S produce ä/ö/ü/ß directly, so the MAC overlay uses
+         *     separate morphs that emit RA(A)/RA(O)/RA(U)/RA(S). Shift composes
+         *     natively in both layouts, no macros needed.
          */
         base_layer {
             display-name = "QWERTY";
