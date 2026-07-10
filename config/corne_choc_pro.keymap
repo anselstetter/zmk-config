@@ -176,7 +176,7 @@
          * |-----+-----+-----+-----+-----+-----|              |-----+-----+-----+-----+-----+-----|
          * |SHFT |  Z  |  X  |  C  |  V  |  B  |              |  N  |  M  |  ,  |  .  |  /  |RS/E |
          * `-----------------------------------'              `-----------------------------------'
-         *               | GUI | NAV | ENT |                  | SPC | DEV |RALT |
+         *               | GUI | NAV | SPC |                  | SPC | DEV |RALT |
          *               `-----------------'                  `-----------------'
          *
          * [DSP] = display position (no switch wired here, bound to &none).
@@ -217,7 +217,7 @@
 &kp TAB           &kp Q  &kp W  &kp E     &kp R    &kp T      &none      &none      &kp Y      &u_ue    &kp I      &o_oe    &kp P                  &kp BSPC
 &mt LCTRL ESCAPE  &a_ae  &s_sz  &kp D     &kp F    &kp G      &none      &none      &kp H      &kp J    &kp K      &kp L    &lt_to_layer NAV SEMI  &kp SQT
 &kp LSHFT         &kp Z  &kp X  &kp C     &kp V    &kp B                            &kp N      &kp M    &kp COMMA  &kp DOT  &kp FSLH               &mt RSHFT ENTER
-                                &kp LGUI  &mo NAV  &kp RET                          &kp SPACE  &mo DEV  &kp RALT
+                                &kp LGUI  &mo NAV  &kp SPACE                        &kp SPACE  &mo DEV  &kp RALT
             >;
         };
 
